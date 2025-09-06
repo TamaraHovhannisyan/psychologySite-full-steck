@@ -4,18 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiPost } from "@/app/lib/api";
 import { setToken } from "@/app/lib/auth";
+import { LoginResponse } from "../types";
 
-function extractToken(d: any): string | undefined {
-  return (
-    d?.access_token ||
-    d?.token ||
-    d?.jwt ||
-    d?.accessToken ||
-    d?.data?.access_token ||
-    d?.data?.token ||
-    d?.data?.jwt ||
-    d?.data?.accessToken
-  );
+function extractToken(d: LoginResponse): string | undefined {
+  return d.access_token;
 }
 
 const TABS = ["login", "register"] as const;
@@ -31,31 +23,41 @@ export default function AdminAuthPage() {
   const [name, setName] = useState("");
 
   async function onLogin(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setLoading(true);
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
     try {
       const res = await apiPost("/auth/login", { email, password });
-      if (!res.ok) throw new Error((await res.text()) || "Մուտքն անհաջող է");
+      if (!res.ok) throw new Error((await res.text()) || "Login failed.");
       const data = await res.json();
       const token = extractToken(data);
-      if (!token) throw new Error("Token չգտնվեց պատասխանման մեջ");
+      if (!token) throw new Error("Token not found in response");
       setToken(token);
       router.replace("/admin/posts");
-    } catch (err: any) { setError(err?.message || "Սերվերից սխալ եկավ"); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err?.message || "An error occurred from the server.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function onRegister(e: React.FormEvent) {
-    e.preventDefault(); setError(null); setLoading(true);
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
     try {
       const res = await apiPost("/auth/register", { name, email, password });
-      if (!res.ok) throw new Error((await res.text()) || "Գրանցումն անհաջող է");
+      if (!res.ok) throw new Error((await res.text()) || "Registration failed.");
       const data = await res.json();
       const token = extractToken(data);
-      if (!token) throw new Error("Token չգտնվեց պատասխանման մեջ");
+      if (!token) throw new Error("Token not found in the answer");
       setToken(token);
       router.replace("/admin/posts");
-    } catch (err: any) { setError(err?.message || "Սերվերից սխալ եկավ"); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      setError(err?.message || "An error occurred from the server.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -116,7 +118,7 @@ export default function AdminAuthPage() {
       ) : (
         <form onSubmit={onRegister} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Անուն</label>
+            <label className="block text-sm font-medium mb-1">Name</label>
             <input
               type="text"
               required
@@ -137,7 +139,7 @@ export default function AdminAuthPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Գաղտնաբառ</label>
+            <label className="block text-sm font-medium mb-1">Password</label>
             <input
               type="password"
               required
@@ -152,7 +154,7 @@ export default function AdminAuthPage() {
             disabled={loading}
             className="w-full rounded-lg py-2 font-semibold bg-gray-900 text-white disabled:opacity-60"
           >
-            {loading ? "Խնդրում եմ սպասել..." : "Գրանցվել"}
+            {loading ? "Please wait...." : "Register"}
           </button>
         </form>
       )}

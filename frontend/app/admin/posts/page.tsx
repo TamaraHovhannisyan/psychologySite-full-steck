@@ -6,32 +6,24 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { apiGet, apiDelete } from "@/app/lib/api";
 import { getToken, clearToken } from "@/app/lib/auth";
-
+import { AdminListResp, Post } from "@/app/types";
+import Image from "next/image";
 const AdminHeader = dynamic(() => import("@/components/admin/AdminHeader"), {
   ssr: false,
 });
 
-type Post = {
-  id: string;
-  title: string;
-  slug?: string | null;
-  image?: string | null;
-  category: string;
-  createdAt: string;
-  updatedAt: string;
-  published: boolean;
-};
-
-type AdminListResp = {
-  items: Post[];
-  pagination?: { page: number; limit: number; total: number; pages: number };
-};
-
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+const API_ORIGIN = new URL(API_BASE).origin;
+
 function resolveImageUrl(image?: string | null) {
   if (!image) return "";
   if (/^https?:\/\//i.test(image)) return image;
-  return `${API_BASE}${image.startsWith("/") ? image : `/${image}`}`;
+
+  if (image.startsWith("/uploads")) {
+    return `${API_ORIGIN}${image}`;
+  }
+
+  return `${API_ORIGIN}/uploads/${image.replace(/^\/+/, "")}`;
 }
 
 export default function AdminPostsPage() {
@@ -56,7 +48,7 @@ export default function AdminPostsPage() {
         return;
       }
       if (!res.ok)
-        throw new Error((await res.text()) || "Չհաջողվեց բեռնել post-երը");
+        throw new Error((await res.text()) || "Failed to load posts.");
       const data: AdminListResp | Post[] = await res.json();
       const items = Array.isArray(data)
         ? data
@@ -65,7 +57,7 @@ export default function AdminPostsPage() {
           : [];
       setPosts(items);
     } catch (e: any) {
-      setError(e?.message || "Սխալ սերվերից");
+      setError(e?.message || "Error from server");
     } finally {
       setLoading(false);
     }
@@ -73,7 +65,6 @@ export default function AdminPostsPage() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleLogout() {
@@ -82,7 +73,7 @@ export default function AdminPostsPage() {
   }
 
   async function onDelete(id: string) {
-    if (!confirm("Ջնջե՞լ այս փոստը։ Գործողությունը անշրջելի է։")) return;
+    if (!confirm("Delete this email? The action is irreversible.")) return;
     const t = getToken();
     if (!t) {
       router.replace("/admin");
@@ -93,20 +84,17 @@ export default function AdminPostsPage() {
       setError(null);
       const res = await apiDelete(`/admin/posts/${id}`, t);
       const text = await res.text();
-      if (!res.ok) throw new Error(text || "Չհաջողվեց ջնջել");
-      // օպտիմիստիկ թարմացում
+      if (!res.ok) throw new Error(text || "Failed to delete");
       setPosts((prev) => prev.filter((p) => p.id !== id));
     } catch (e: any) {
-      setError(e?.message || "Սերվերից սխալ եկավ");
+      setError(e?.message || "An error occurred from the server.");
     } finally {
       setDeletingId(null);
     }
   }
 
   if (loading) {
-    return (
-      <div className="bg-white shadow-sm rounded-2xl p-6">Բեռնվում է…</div>
-    );
+    return <div className="bg-white shadow-sm rounded-2xl p-6">Loading…</div>;
   }
 
   return (
@@ -118,7 +106,7 @@ export default function AdminPostsPage() {
           href="/admin/posts/new"
           className="rounded-lg px-3 py-1.5 bg-gray-900 text-white"
         >
-          + Նոր փոստ
+          + new post
         </Link>
       </div>
 
@@ -129,13 +117,15 @@ export default function AdminPostsPage() {
       )}
 
       {posts.length === 0 ? (
-        <p className="text-gray-600">Դատարկ է (չկան փոստեր)։</p>
+        <p className="text-gray-600">Empty (no posts)։</p>
       ) : (
         <ul className="divide-y border rounded-lg">
           {posts.map((p) => (
             <li key={p.id} className="p-3 flex items-center gap-3">
               {p.image ? (
-                <img
+                <Image
+                  width={48}
+                  height={48}
                   src={resolveImageUrl(p.image)}
                   alt=""
                   className="h-12 w-12 rounded object-cover border"
@@ -167,7 +157,7 @@ export default function AdminPostsPage() {
                   disabled={deletingId === p.id}
                   className="rounded-md px-3 py-1.5 border text-sm text-red-600 disabled:opacity-60"
                 >
-                  {deletingId === p.id ? "Ջնջում…" : "Delete"}
+                  {deletingId === p.id ? "Delete..." : "Delete"}
                 </button>
               </div>
             </li>

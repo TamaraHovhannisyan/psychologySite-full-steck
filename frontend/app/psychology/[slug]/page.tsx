@@ -23,21 +23,21 @@ function resolveImageUrl(image?: string | null) {
 async function getPost(slug: string): Promise<Post | null> {
   const res = await fetch(
     `${API_BASE}/posts/slug/${encodeURIComponent(slug)}`,
-    {
-      cache: "no-store",
-    }
+    { cache: "no-store" }
   );
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await res.text());
   return await res.json();
 }
 
+// ⬇️ params-ը հիմա Promise է
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const post = await getPost(params.slug).catch(() => null);
+  const { slug } = await params; // ⬅️ await
+  const post = await getPost(slug).catch(() => null);
   return {
     title: post?.title ?? "Հոգեբանություն",
     description: post?.content?.slice(0, 160) ?? "Հոգեբանություն",
@@ -47,9 +47,10 @@ export async function generateMetadata({
 export default async function PsychologyBySlug({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const post = await getPost(params.slug);
+  const { slug } = await params; // ⬅️ await
+  const post = await getPost(slug);
   if (!post || post.category !== "psychology") return notFound();
 
   return (

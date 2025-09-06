@@ -5,7 +5,7 @@ const BASE = RAW_BASE.replace(/\/$/, "");
 
 function buildUrl(path: string) {
   const p = path.startsWith("/") ? path : `/${path}`;
-  if (!BASE) throw new Error("NEXT_PUBLIC_API_URL չկա .env.local-ում");
+  if (!BASE) throw new Error("NEXT_PUBLIC_API_URL is missing in .env.local");
   return `${BASE}${p}`;
 }
 

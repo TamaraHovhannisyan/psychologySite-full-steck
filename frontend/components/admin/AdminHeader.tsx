@@ -8,7 +8,7 @@ export default function AdminHeader({ onLogout }: { onLogout: () => void }) {
         onClick={onLogout}
         className="rounded-lg px-3 py-1.5 bg-gray-900 text-white"
       >
-        Logout
+        logout
       </button>
     </header>
   );
