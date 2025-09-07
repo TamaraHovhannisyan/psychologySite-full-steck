@@ -43,7 +43,7 @@ export function apiPostForm(path: string, form: FormData, token?: string) {
       Accept: "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: form, 
+    body: form,
   });
 }
 

@@ -145,7 +145,9 @@ export default function EditPostPage() {
               checked={published}
               onChange={(e) => setPublished(e.target.checked)}
             />
-            <span className="text-sm">Հրապարակված</span>
+            <span className="text-sm">
+              {`Publish (If you don't publish it, it will remain in draft.)`}
+            </span>
           </label>
         </div>
 

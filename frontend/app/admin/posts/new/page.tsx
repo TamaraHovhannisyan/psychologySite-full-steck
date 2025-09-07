@@ -6,9 +6,9 @@ import { apiPost, apiPostForm } from "@/app/lib/api";
 import { getToken } from "@/app/lib/auth";
 
 const CATEGORIES = [
-  { value: "articles", label: "Հոդվածներ" },
-  { value: "self-growth", label: "Ինքնազարգացում" },
-  { value: "psychology", label: "Հոգեբանություն" },
+  { value: "articles", label: "articles" },
+  { value: "self-growth", label: "self-growth" },
+  { value: "psychology", label: "psychology" },
 ] as const;
 
 function slugify(input: string) {
@@ -60,7 +60,6 @@ export default function NewPostPage() {
         form.append("image", file);
         res = await apiPostForm("/admin/posts", form, token);
       } else {
-        // JSON
         res = await apiPost(
           "/admin/posts",
           {
@@ -75,11 +74,11 @@ export default function NewPostPage() {
       }
 
       const text = await res.text();
-      if (!res.ok) throw new Error(text || "Չհաջողվեց ստեղծել փոստը");
+      if (!res.ok) throw new Error(text || "Failed to create mail.");
 
       router.replace("/admin/posts");
     } catch (e: any) {
-      setError(e?.message || "Սերվերից սխալ եկավ");
+      setError(e?.message || "An error occurred from the server.");
     } finally {
       setSaving(false);
     }
@@ -87,7 +86,7 @@ export default function NewPostPage() {
 
   return (
     <div className="bg-white shadow-sm rounded-2xl p-6 max-w-3xl">
-      <h1 className="text-2xl font-semibold mb-6">Նոր փոստ</h1>
+      <h1 className="text-2xl font-semibold mb-6">new post</h1>
 
       {error && (
         <div className="mb-4 rounded-md bg-red-50 p-3 text-red-700 text-sm">
@@ -97,7 +96,7 @@ export default function NewPostPage() {
 
       <form onSubmit={onSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium mb-1">Վերնագիր *</label>
+          <label className="block text-sm font-medium mb-1">Title *</label>
           <input
             required
             value={title}
@@ -111,7 +110,7 @@ export default function NewPostPage() {
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Slug (ըստ ցանկության)
+            Slug (as desired)
           </label>
           <input
             value={slug}
@@ -121,9 +120,7 @@ export default function NewPostPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Բովանդակություն
-          </label>
+          <label className="block text-sm font-medium mb-1">Content</label>
           <textarea
             rows={8}
             value={content}
@@ -134,7 +131,7 @@ export default function NewPostPage() {
 
         <div>
           <label className="block text-sm font-medium mb-1">
-            Նկար (ֆայլից)
+            Picture (from file)
           </label>
           <input
             type="file"
@@ -150,9 +147,7 @@ export default function NewPostPage() {
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Կատեգորիա *
-            </label>
+            <label className="block text-sm font-medium mb-1">Category *</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as any)}
@@ -172,24 +167,25 @@ export default function NewPostPage() {
               checked={published}
               onChange={(e) => setPublished(e.target.checked)}
             />
-            <span className="text-sm">Հրապարակված</span>
+            <span className="text-sm">
+              {`Published (If you don't publish it, it will remain in draft.)`}
+            </span>
           </label>
         </div>
-
         <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={saving || !title}
             className="rounded-lg px-4 py-2 font-semibold bg-gray-900 text-white disabled:opacity-60"
           >
-            {saving ? "Պահպանում…" : "Ստեղծել"}
+            {saving ? "Saving…" : "Create"}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
             className="rounded-lg px-4 py-2 border"
           >
-            Ետ
+            Back
           </button>
         </div>
       </form>
