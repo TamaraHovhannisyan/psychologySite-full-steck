@@ -1,94 +1,73 @@
 import {
   Injectable,
-  UnauthorizedException,
   ConflictException,
-  ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
-import { RegisterDto } from './dtos/register.dto';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { Response } from 'express';
 
-type AccessToken = { access_token: string };
+import { Admin } from './entities/admin.entity';
+import { RegisterDto } from './dtos/register.dto';
+import { LoginDto } from './dtos/login.dto';
 
 @Injectable()
 export class AuthService {
-  private readonly saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
-  private readonly allowSelfRegister =
-    process.env.ALLOW_SELF_REGISTER !== 'false';
-  private readonly defaultRegisterRole = (process.env.DEFAULT_REGISTER_ROLE ||
-    'user') as User['role'];
-
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(Admin)
+    private readonly adminRepo: Repository<Admin>,
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AccessToken> {
-    if (!this.allowSelfRegister) {
-      throw new ForbiddenException('Self-registration is disabled');
-    }
-
-    const email = registerDto.email.trim().toLowerCase();
-
-    const existingUser = await this.userRepository.findOne({
-      where: { email },
+  async register(dto: RegisterDto): Promise<Admin> {
+    const existingAdmin = await this.adminRepo.findOne({
+      where: { username: dto.username },
     });
-    if (existingUser) {
-      throw new ConflictException('User already exists');
+    if (existingAdmin) {
+      throw new ConflictException('Username already in use');
     }
 
-    const hashedPassword = await bcrypt.hash(
-      registerDto.password,
-      this.saltRounds,
-    );
+    const hashedPassword: string = await bcrypt.hash(dto.password, 10);
 
-    const user = this.userRepository.create({
-      email,
+    const newAdmin = this.adminRepo.create({
+      username: dto.username,
       password: hashedPassword,
-      role: this.defaultRegisterRole,
+      role: 'admin',
     });
 
-    try {
-      await this.userRepository.save(user);
-    } catch (e: any) {
-      if (e?.code === '23505') {
-        throw new ConflictException('User already exists');
-      }
-      throw e;
-    }
-
-    return { access_token: await this.signToken(user) };
+    return this.adminRepo.save(newAdmin);
   }
 
-  async validateUser(email: string, password: string): Promise<string> {
-    const normalizedEmail = email.trim().toLowerCase();
-    const user = await this.userRepository.findOne({
-      where: { email: normalizedEmail },
+  async logIn(dto: LoginDto, res: Response): Promise<{ message: string }> {
+    const admin = await this.adminRepo.findOne({
+      where: { username: dto.username },
     });
-
-    if (!user) {
+    if (!admin) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid: boolean = await bcrypt.compare(
+      dto.password,
+      admin.password,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.signToken(user);
-  }
+    const payload = { sub: admin.id, username: admin.username };
+    const token: string = await this.jwtService.signAsync(payload, {
+      expiresIn: '10d',
+    });
 
-  async login(email: string, password: string): Promise<AccessToken> {
-    const token = await this.validateUser(email, password);
-    return { access_token: token };
-  }
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 10 * 24 * 60 * 60 * 1000,
+    });
 
-  private signToken(user: User): Promise<string> {
-    const payload = { sub: user.id, email: user.email, role: user.role };
-    return this.jwtService.signAsync(payload);
+    return { message: 'Login successful' };
   }
 }

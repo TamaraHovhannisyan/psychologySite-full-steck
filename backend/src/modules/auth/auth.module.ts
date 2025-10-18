@@ -5,29 +5,24 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { Admin } from './entities/admin.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { User } from './entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([Admin]),
 
-    PassportModule.register({ defaultStrategy: 'jwt', session: false }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
 
     JwtModule.registerAsync({
       useFactory: () => {
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-          throw new Error('JWT_SECRET is not set');
-        }
+        const secret = process.env.JWT_SECRET || 'default_secret';
 
         return {
           secret,
           signOptions: {
-            expiresIn: process.env.JWT_EXPIRES_IN || '1d',
+            expiresIn: '10d',
             algorithm: 'HS256',
-            issuer: process.env.JWT_ISSUER || undefined,
-            audience: process.env.JWT_AUDIENCE || undefined,
           },
         };
       },

@@ -1,16 +1,6 @@
+import { Body, Controller, HttpCode, Post, Res } from '@nestjs/common';
+import { Response } from 'express';
 import {
-  Body,
-  Controller,
-  HttpCode,
-  Post,
-  Get,
-  UseGuards,
-  Req,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { Request } from 'express';
-import {
-  ApiBearerAuth,
   ApiTags,
   ApiOperation,
   ApiCreatedResponse,
@@ -24,12 +14,6 @@ import { Throttle, seconds } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-
-type JwtUser = { userId: string; email: string; role?: string };
-interface AuthenticatedRequest extends Request {
-  user: JwtUser;
-}
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -38,34 +22,26 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  @ApiOperation({ summary: 'Register a new admin user' })
+  @ApiOperation({ summary: 'Register a new admin' })
   @ApiCreatedResponse({ description: 'User registered successfully.' })
   @ApiBadRequestResponse({ description: 'Validation failed.' })
-  @ApiConflictResponse({ description: 'Email already in use.' })
+  @ApiConflictResponse({ description: 'Username already in use.' })
   @Throttle({ default: { limit: 5, ttl: seconds(60) } })
-  async register(@Body() dto: RegisterDto): Promise<{ access_token: string }> {
+  async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
   @Post('login')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Login and get JWT token' })
+  @ApiOperation({ summary: 'Login and set JWT in HTTP-only cookie' })
   @ApiOkResponse({ description: 'Successfully logged in.' })
   @ApiBadRequestResponse({ description: 'Validation failed.' })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials.' })
   @Throttle({ default: { limit: 10, ttl: seconds(60) } })
-  async login(@Body() dto: LoginDto): Promise<{ access_token: string }> {
-    const token = await this.authService.validateUser(dto.email, dto.password);
-    if (!token) throw new UnauthorizedException('Invalid credentials');
-    return { access_token: token };
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('profile')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current logged-in admin profile' })
-  @ApiOkResponse({ description: 'Returns the user profile.' })
-  getProfile(@Req() req: AuthenticatedRequest) {
-    return req.user;
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
+    return this.authService.logIn(dto, res);
   }
 }
