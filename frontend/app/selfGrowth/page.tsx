@@ -1,4 +1,4 @@
-// app/selfGrowth/page.tsx
+import Image from "next/image";
 import Link from "next/link";
 
 type Post = {
@@ -35,10 +35,10 @@ export default async function SelfGrowthPage() {
 
   return (
     <section className="max-w-4xl mx-auto px-4 py-10 space-y-6">
-      <h1 className="text-3xl font-bold">Ինքնազարգացում</h1>
+      <h1 className="text-3xl font-bold">Self-growth</h1>
 
       {posts.length === 0 ? (
-        <p className="text-gray-600">Դեռ նյութեր չկան։</p>
+        <p className="text-gray-600">There are no materials yet.</p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
           {posts.map((p) => {
@@ -50,11 +50,15 @@ export default async function SelfGrowthPage() {
                   className="block rounded-xl border p-4 bg-white hover:shadow transition"
                 >
                   {p.image && (
-                    <img
-                      src={resolveImageUrl(p.image)}
-                      alt=""
-                      className="mb-3 h-40 w-full object-cover rounded-lg"
-                    />
+                    <div className="relative w-full h-52 bg-gray-100 flex items-center justify-center overflow-hidden rounded-xl">
+                      <Image
+                        src={`${process.env.NEXT_PUBLIC_API_URL}`}
+                        alt={p.title}
+                        fill
+                        className="object-contain"
+                        unoptimized
+                      />
+                    </div>
                   )}
                   <h3 className="font-semibold text-lg">{p.title}</h3>
                   <p className="text-xs text-gray-500 mb-2">

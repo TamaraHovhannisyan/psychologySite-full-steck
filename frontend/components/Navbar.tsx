@@ -1,76 +1,109 @@
 "use client";
-import Image from "next/image";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
 
 const navLinks = [
-  { id: "articles", label: "Հոդվածներ" },
-  { id: "self-growth", label: "Ինքնազարգացում" },
-  { id: "psychology", label: "Հոգեբանություն" },
-  { id: "contact", label: "Կոնտակտ" },
+  { id: "articles", label: "Articles" },
+  { id: "self-growth", label: "Self-Growth" },
+  { id: "psychology", label: "Psychology" },
+  { id: "contact", label: "Contact" },
 ];
 
-const Navbar = () => {
+export default function Navbar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const toggleMenu = () => {
-    setIsMenuOpen((prev) => !prev);
+  const handleNavClick = (id: string) => {
+    if (pathname === "/") {
+      const element = document.getElementById(id);
+      if (element) {
+        const offset = -80;
+        const top =
+          element.getBoundingClientRect().top + window.scrollY + offset;
+        window.scrollTo({ top, behavior: "smooth" });
+      }
+    } else {
+      router.push(`/#${id}`);
+    }
+    setIsMenuOpen(false);
   };
 
   return (
-    <nav className="bg-[#F7F8F9]  px-10  flex justify-between items-center h-14 relative z-50">
-      <div className=" ">
-        <Image
-          src="/logo.png"
-          alt="Logo"
-          width={70}
-          height={70}
-          className="inline-block"
-        />
+    <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+      <div className="flex justify-between items-center max-w-6xl mx-auto px-6 md:px-10 h-16">
+        <div
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={60}
+            height={60}
+            className="select-none"
+          />
+          <span className="text-[#017187] font-semibold text-lg hidden sm:block">
+            PsychologySite
+          </span>
+        </div>
+
+        {!isMobile && (
+          <ul className="flex gap-8 font-medium text-[#404040]">
+            {navLinks.map((link) => (
+              <li
+                key={link.id}
+                onClick={() => handleNavClick(link.id)}
+                className="hover:text-[#017187] cursor-pointer transition-colors duration-200"
+              >
+                {link.label}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {isMobile && (
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 text-[#404040]"
+          >
+            {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+          </button>
+        )}
       </div>
 
-      {!isMobile && (
-        <ul className="flex gap-6 font-medium text-[#404040]">
-          {navLinks.map((link) => (
-            <li key={link.id} className="hover:text-[#017187] cursor-pointer">
-              {link.label}
-            </li>
-          ))}
-        </ul>
-      )}
-
       {isMobile && (
-        <button onClick={toggleMenu} className="p-2 z-50">
-          {isMenuOpen ? <X size={30} /> : <Menu size={30} />}
-        </button>
-      )}
-
-      {isMobile && isMenuOpen && (
-        <ul className="absolute top-16 right-4 w-full bg-white  rounded-xl  py-2 text-left px-5">
-          {navLinks.map((link) => (
-            <li
-              key={link.id}
-              onClick={toggleMenu}
-              className="py-2 px-4 hover:bg-gray-100 cursor-pointer text-[#404040] font-medium "
-            >
-              {link.label}
-            </li>
-          ))}
-        </ul>
+        <div
+          className={`absolute top-16 left-0 w-full bg-white shadow-md transition-all duration-300 ease-in-out ${
+            isMenuOpen
+              ? "max-h-60 opacity-100"
+              : "max-h-0 opacity-0 overflow-hidden"
+          }`}
+        >
+          <ul className="flex flex-col px-6 py-3">
+            {navLinks.map((link) => (
+              <li
+                key={link.id}
+                onClick={() => handleNavClick(link.id)}
+                className="py-2 text-[#404040] font-medium hover:text-[#017187] cursor-pointer transition-colors duration-200"
+              >
+                {link.label}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </nav>
   );
-};
-
-export default Navbar;
+}

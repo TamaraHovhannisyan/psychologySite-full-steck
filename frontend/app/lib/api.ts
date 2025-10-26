@@ -4,82 +4,91 @@ const RAW_BASE =
 const BASE = RAW_BASE.replace(/\/$/, "");
 
 function buildUrl(path: string) {
-  const p = path.startsWith("/") ? path : `/${path}`;
-  if (!BASE) throw new Error("NEXT_PUBLIC_API_URL is missing in .env.local");
-  return `${BASE}${p}`;
+  if (!BASE) throw new Error("❌ Missing NEXT_PUBLIC_API_URL in .env.local");
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${BASE}${normalized}`;
 }
 
-export function apiGet(path: string, token?: string) {
+export async function apiGet(path: string) {
   return fetch(buildUrl(path), {
     method: "GET",
+    credentials: "include",
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     cache: "no-store",
   });
 }
 
-export function apiPost(
-  path: string,
-  body?: Record<string, any>,
-  token?: string
-) {
+export async function apiPost(path: string, body?: Record<string, unknown>) {
   return fetch(buildUrl(path), {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body ?? {}),
   });
 }
 
-export function apiPostForm(path: string, form: FormData, token?: string) {
+export async function apiPostForm(path: string, form: FormData) {
   return fetch(buildUrl(path), {
     method: "POST",
+    credentials: "include",
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: form,
   });
 }
 
-export function apiPatch(
-  path: string,
-  body?: Record<string, any>,
-  token?: string
-) {
+export async function apiPatch(path: string, body?: Record<string, unknown>) {
   return fetch(buildUrl(path), {
     method: "PATCH",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body ?? {}),
   });
 }
 
-export function apiPatchForm(path: string, form: FormData, token?: string) {
+export async function apiPatchForm(path: string, form: FormData) {
   return fetch(buildUrl(path), {
     method: "PATCH",
+    credentials: "include",
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: form,
   });
 }
 
-export function apiDelete(path: string, token?: string) {
+export async function apiDelete(path: string) {
   return fetch(buildUrl(path), {
     method: "DELETE",
+    credentials: "include",
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
+}
+
+const KEY = "admin_token";
+
+export function setToken(token: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KEY, token);
+}
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(KEY);
+}
+
+export function clearToken() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
 }

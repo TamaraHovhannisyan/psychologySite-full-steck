@@ -1,75 +1,61 @@
+import Image from "next/image";
 import Link from "next/link";
+import { apiGet } from "@/app/lib/api";
 
-type Post = {
-  id: string;
+interface Post {
+  id: number;
   title: string;
-  slug?: string | null;
-  image?: string | null;
-  content?: string | null;
+  content: string;
   category: string;
-  createdAt: string;
-};
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3009"
-).replace(/\/$/, "");
-
-function resolveImageUrl(image?: string | null) {
-  if (!image) return "";
-  if (/^https?:\/\//i.test(image)) return image;
-  return `${API_BASE}${image.startsWith("/") ? image : `/${image}`}`;
-}
-
-async function getPosts(): Promise<Post[]> {
-  const res = await fetch(`${API_BASE}/posts?category=articles`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data?.items) ? data.items : [];
+  imageUrl: string | null;
 }
 
 export default async function ArticlesPage() {
-  const posts = await getPosts();
+  const res = await apiGet("/posts");
+
+  if (!res.ok) {
+    throw new Error("Failed to load articles");
+  }
+
+  const posts: Post[] = await res.json();
 
   return (
-    <section className="max-w-4xl mx-auto px-4 py-10 space-y-6">
-      <h1 className="text-3xl font-bold">Հոդվածներ</h1>
+    <section className="mt-10 w-full min-h-screen bg-white text-gray-800 px-6 py-10">
+      <h1 className="text-3xl font-bold mb-8 text-center">Articles</h1>
 
-      {posts.length === 0 ? (
-        <p className="text-gray-600">Դեռ հոդվածներ չկան։</p>
-      ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {posts.map((p) => {
-            const href = p.slug ? `/articles/${p.slug}` : "#";
-            return (
-              <li key={p.id}>
-                <Link
-                  href={href}
-                  className="block rounded-xl border p-4 bg-white hover:shadow transition"
-                >
-                  {p.image && (
-                    <img
-                      src={resolveImageUrl(p.image)}
-                      alt=""
-                      className="mb-3 h-40 w-full object-cover rounded-lg"
-                    />
-                  )}
-                  <h3 className="font-semibold text-lg">{p.title}</h3>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {new Date(p.createdAt).toLocaleDateString("hy-AM")}
-                  </p>
-                  {p.content && (
-                    <p className="text-sm text-gray-700 line-clamp-3">
-                      {p.content}
-                    </p>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {posts.map((post) => (
+          <Link
+            key={post.id}
+            href={`/articles/${post.id}`}
+            className="block rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-200 bg-gray-50"
+          >
+            {post.imageUrl && (
+              <div className="relative w-full h-52 bg-gray-100 flex items-center justify-center overflow-hidden rounded-xl">
+                <Image
+                  src={`${process.env.NEXT_PUBLIC_API_URL}${post.imageUrl}`}
+                  alt={post.title}
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            )}
+
+            <div className="p-5">
+              <h2 className="text-xl font-semibold mb-2 line-clamp-2">
+                {post.title}
+              </h2>
+              <p className="text-sm text-gray-600 line-clamp-3">
+                {post.content}
+              </p>
+              <div className="mt-3 text-sm text-[#017187] font-medium">
+                #{post.category}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
     </section>
   );
 }
