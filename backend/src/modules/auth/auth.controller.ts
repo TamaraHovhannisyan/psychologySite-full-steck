@@ -41,7 +41,24 @@ export class AuthController {
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ message: string }> {
+  ): Promise<{ access_token: string }> {
     return this.authService.logIn(dto, res);
+  }
+
+  @Post('logout')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Logout and clear HttpOnly cookie' })
+  @ApiOkResponse({ description: 'User logged out successfully.' })
+  logout(@Res({ passthrough: true }) res: Response) {
+    const isProd = process.env.NODE_ENV === 'production';
+
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd ? true : false,
+      path: '/',
+    });
+
+    return { message: 'Logged out successfully' };
   }
 }

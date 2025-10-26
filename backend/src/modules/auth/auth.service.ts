@@ -40,7 +40,7 @@ export class AuthService {
     return this.adminRepo.save(newAdmin);
   }
 
-  async logIn(dto: LoginDto, res: Response): Promise<{ message: string }> {
+  async logIn(dto: LoginDto, res: Response): Promise<{ access_token: string }> {
     const admin = await this.adminRepo.findOne({
       where: { username: dto.username },
     });
@@ -48,16 +48,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid: boolean = await bcrypt.compare(
-      dto.password,
-      admin.password,
-    );
+    const isPasswordValid = await bcrypt.compare(dto.password, admin.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const payload = { sub: admin.id, username: admin.username };
-    const token: string = await this.jwtService.signAsync(payload, {
+    const token = await this.jwtService.signAsync(payload, {
       expiresIn: '10d',
     });
 
@@ -68,6 +65,6 @@ export class AuthService {
       maxAge: 10 * 24 * 60 * 60 * 1000,
     });
 
-    return { message: 'Login successful' };
+    return { access_token: token };
   }
 }
