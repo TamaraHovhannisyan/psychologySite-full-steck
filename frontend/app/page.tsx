@@ -1,24 +1,27 @@
-// app/page.tsx
+
 import Articles from "@/components/pages/Articles";
 import SelfGrowthPage from "@/components/pages/SelfGrowth";
 import PsychologyPage from "@/components/pages/Psychology";
-import ContactPage from "@/components/pages/Contact";
+import Contact from "@/components/pages/Contact";
 
 export default function Home() {
   return (
-    <>
-      <section>
+    <main>
+      <section id="articles">
         <Articles />
       </section>
-      <section>
+
+      <section id="self-growth">
         <SelfGrowthPage />
       </section>
-      <section>
+
+      <section id="psychology">
         <PsychologyPage />
       </section>
-      <section>
-        <ContactPage />
+
+      <section id="contact">
+        <Contact />
       </section>
-    </>
+    </main>
   );
 }

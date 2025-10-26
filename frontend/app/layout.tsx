@@ -1,11 +1,6 @@
+import NavbarVisibility from "@/components/NavbarVisibility";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Your App Name",
-  description: "Your App Description",
-};
 
 export default function RootLayout({
   children,
@@ -13,10 +8,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="hy">
-      <body className="text-black">
-        <Navbar />
-        <main>{children}</main>
+    <html lang="en">
+      <body className="bg-white text-gray-900">
+        <NavbarVisibility />
+        {children}
       </body>
     </html>
   );

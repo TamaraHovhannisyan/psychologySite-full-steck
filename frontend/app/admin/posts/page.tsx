@@ -2,168 +2,119 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { apiGet, apiDelete } from "@/app/lib/api";
-import { getToken, clearToken } from "@/app/lib/auth";
-import { AdminListResp, Post } from "@/app/types";
-import Image from "next/image";
-const AdminHeader = dynamic(() => import("@/components/admin/AdminHeader"), {
-  ssr: false,
-});
+import { Trash2, Edit3, Plus } from "lucide-react";
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-const API_ORIGIN = new URL(API_BASE).origin;
-
-function resolveImageUrl(image?: string | null) {
-  if (!image) return "";
-  if (/^https?:\/\//i.test(image)) return image;
-
-  if (image.startsWith("/uploads")) {
-    return `${API_ORIGIN}${image}`;
-  }
-
-  return `${API_ORIGIN}/uploads/${image.replace(/^\/+/, "")}`;
+interface Post {
+  id: number;
+  title: string;
+  category: string;
 }
 
 export default function AdminPostsPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  async function load() {
-    const t = getToken();
-    if (!t) {
-      router.replace("/admin");
-      return;
-    }
+  async function loadPosts() {
     try {
-      setError(null);
-      const res = await apiGet("/admin/posts", t);
-      if (res.status === 401) {
-        clearToken();
-        router.replace("/admin");
-        return;
-      }
-      if (!res.ok)
-        throw new Error((await res.text()) || "Failed to load posts.");
-      const data: AdminListResp | Post[] = await res.json();
-      const items = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.items)
-          ? data.items
-          : [];
-      setPosts(items);
-    } catch (e: any) {
-      setError(e?.message || "Error from server");
+      const res = await apiGet("/posts");
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setPosts(data);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleDelete(id: number) {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+    await apiDelete(`/posts/${id}`);
+    loadPosts();
+  }
+
   useEffect(() => {
-    load();
+    loadPosts();
   }, []);
 
-  function handleLogout() {
-    clearToken();
-    router.replace("/admin");
-  }
+  if (loading)
+    return <p className="text-center py-10 text-gray-600">Loading posts...</p>;
 
-  async function onDelete(id: string) {
-    if (!confirm("Delete this email? The action is irreversible.")) return;
-    const t = getToken();
-    if (!t) {
-      router.replace("/admin");
-      return;
-    }
-    try {
-      setDeletingId(id);
-      setError(null);
-      const res = await apiDelete(`/admin/posts/${id}`, t);
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || "Failed to delete");
-      setPosts((prev) => prev.filter((p) => p.id !== id));
-    } catch (e: any) {
-      setError(e?.message || "An error occurred from the server.");
-    } finally {
-      setDeletingId(null);
-    }
-  }
+  if (error)
+    return (
+      <p className="text-center text-red-500 font-medium py-10">{error}</p>
+    );
 
-  if (loading) {
-    return <div className="bg-white shadow-sm rounded-2xl p-6">Loading…</div>;
-  }
-
-  return (
-    <div className="bg-white shadow-sm rounded-2xl p-6">
-      <AdminHeader onLogout={handleLogout} />
-
-      <div className="mb-4 flex justify-end">
+  if (posts.length === 0)
+    return (
+      <section className="text-center py-12">
+        <h2 className="text-2xl font-semibold mb-4">No posts found</h2>
         <Link
           href="/admin/posts/new"
-          className="rounded-lg px-3 py-1.5 bg-gray-900 text-white"
+          className="inline-flex items-center gap-2 bg-[#017187] text-white px-4 py-2 rounded-lg hover:bg-[#015e6e] transition"
         >
-          + new post
+          <Plus size={18} /> Create Post
+        </Link>
+      </section>
+    );
+
+  return (
+    <section className="w-full">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+        <h2 className="text-2xl font-bold text-[#075E6C]">Manage Posts</h2>
+        <Link
+          href="/admin/posts/new"
+          className="inline-flex items-center justify-center gap-2 bg-[#017187] text-white px-4 py-2 rounded-lg hover:bg-[#015e6e] transition"
+        >
+          <Plus size={18} /> New Post
         </Link>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-3 text-red-700 text-sm">
-          {error}
-        </div>
-      )}
+      <div className="overflow-x-auto rounded-lg shadow border border-gray-200">
+        <table className="w-full border-collapse bg-white text-sm sm:text-base">
+          <thead>
+            <tr className="bg-gray-100 text-left">
+              <th className="p-3 w-[70px]">ID</th>
+              <th className="p-3 min-w-[180px]">Title</th>
+              <th className="p-3 min-w-[120px]">Category</th>
+              <th className="p-3 w-[130px] text-center">Actions</th>
+            </tr>
+          </thead>
 
-      {posts.length === 0 ? (
-        <p className="text-gray-600">Empty (no posts)։</p>
-      ) : (
-        <ul className="divide-y border rounded-lg">
-          {posts.map((p) => (
-            <li key={p.id} className="p-3 flex items-center gap-3">
-              {p.image ? (
-                <Image
-                  width={48}
-                  height={48}
-                  src={resolveImageUrl(p.image)}
-                  alt=""
-                  className="h-12 w-12 rounded object-cover border"
-                />
-              ) : (
-                <div className="h-12 w-12 rounded bg-gray-100 border grid place-items-center text-xs text-gray-500">
-                  No img
-                </div>
-              )}
-
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{p.title}</div>
-                <div className="text-xs text-gray-500">
-                  {p.category} • {p.slug || "—"} •{" "}
-                  {new Date(p.createdAt).toLocaleDateString()} •{" "}
-                  {p.published ? "Published" : "Draft"}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/admin/posts/${p.id}/edit`}
-                  className="rounded-md px-3 py-1.5 border text-sm"
-                >
-                  Edit
-                </Link>
-                <button
-                  onClick={() => onDelete(p.id)}
-                  disabled={deletingId === p.id}
-                  className="rounded-md px-3 py-1.5 border text-sm text-red-600 disabled:opacity-60"
-                >
-                  {deletingId === p.id ? "Delete..." : "Delete"}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+          <tbody>
+            {posts.map((post) => (
+              <tr
+                key={post.id}
+                className="border-t hover:bg-gray-50 transition-colors"
+              >
+                <td className="p-3 text-gray-700">{post.id}</td>
+                <td className="p-3 text-gray-900 font-medium">{post.title}</td>
+                <td className="p-3 capitalize text-gray-600">
+                  {post.category}
+                </td>
+                <td className="p-3 text-center flex sm:justify-center gap-3">
+                  <Link
+                    href={`/admin/posts/${post.id}/edit`}
+                    className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <Edit3 size={16} />{" "}
+                    <span className="hidden sm:inline">Edit</span>
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(post.id)}
+                    className="text-red-600 hover:text-red-800 flex items-center gap-1"
+                  >
+                    <Trash2 size={16} />{" "}
+                    <span className="hidden sm:inline">Delete</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
